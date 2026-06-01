@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, select
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, select, update, delete
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 from typing import List
 
@@ -61,6 +61,9 @@ class Order(Base):
             f"product_id={self.product_id!r} quantity={self.quantity!r}>"
         )
 
+# Drops the whole database to start fresh each time. Comment out if you want to keep data between runs.
+Base.metadata.drop_all(engine)
+
 # Creates the tables in the database. Run after tables are defined.
 Base.metadata.create_all(engine)
 
@@ -68,40 +71,40 @@ Base.metadata.create_all(engine)
 # Adding Data
 # --------------------
 
-# with Session(engine) as session:
-    # # Add users.
-    # joe = User(name="Joe", email="joem@example.com")
-    # mary = User(name="Mary", email="maryw@example.com")
-    # gabino = User(name="Gabino", email="gabinoc@example.com")
+with Session(engine) as session:
+    # Add users.
+    joe = User(name="Joe", email="joem@example.com")
+    mary = User(name="Mary", email="maryw@example.com")
+    gabino = User(name="Gabino", email="gabinoc@example.com")
 
-    # session.add(joe)
-    # session.add(mary)
-    # session.add(gabino)
-    # session.commit()
+    session.add(joe)
+    session.add(mary)
+    session.add(gabino)
+    session.commit()
 
-    # # Add products.
-    # product1 = Product(name="keyboard", price=50)
-    # product2 = Product(name="mouse", price=25)
-    # product3 = Product(name="monitor", price=200)
-    # product4 = Product(name="laptop", price=800)
+    # Add products.
+    product1 = Product(name="keyboard", price=50)
+    product2 = Product(name="mouse", price=25)
+    product3 = Product(name="monitor", price=200)
+    product4 = Product(name="laptop", price=800)
 
-    # session.add(product1)
-    # session.add(product2)
-    # session.add(product3)
-    # session.add(product4)
-    # session.commit()
+    session.add(product1)
+    session.add(product2)
+    session.add(product3)
+    session.add(product4)
+    session.commit()
 
-    # # Add orders.
-    # order1 = Order(user_id=joe.id, product_id=product1.id, quantity=2)
-    # order2 = Order(user_id=mary.id, product_id=product3.id, quantity=1)
-    # order3 = Order(user_id=gabino.id, product_id=product4.id, quantity=1)
-    # order4 = Order(user_id=joe.id, product_id=product2.id, quantity=2)
+    # Add orders.
+    order1 = Order(user_id=joe.id, product_id=product1.id, quantity=2)
+    order2 = Order(user_id=mary.id, product_id=product3.id, quantity=1)
+    order3 = Order(user_id=gabino.id, product_id=product4.id, quantity=1)
+    order4 = Order(user_id=joe.id, product_id=product2.id, quantity=2)
 
-    # session.add(order1)
-    # session.add(order2)
-    # session.add(order3)
-    # session.add(order4) 
-    # session.commit()
+    session.add(order1)
+    session.add(order2)
+    session.add(order3)
+    session.add(order4) 
+    session.commit()
 
 # --------------------
 # Query Data
@@ -128,6 +131,84 @@ def printOrderInfo(session: Session):
     for order in orders:
         print(f"Order ID: {order.id}, User: {order.user.name}, Product: {order.product.name}, Quantity: {order.quantity}")
 
+# --------------------
+# Update Data
+# --------------------
+
+def updateUserEmail(session: Session, user_id: int, new_email: str):
+    user = session.get(User, user_id)
+    if user is None:
+        print("User not found")
+        return
+
+    user.email = new_email
+    session.commit()
+    print(f"Updated {user.name} email to {user.email}")
+
+def updateProductPrice(session: Session, product_id: int, new_price: int):
+    product = session.get(Product, product_id)
+    if product is None:
+        print("Product not found")
+        return
+
+    product.price = new_price
+    session.commit()
+    print(f"Updated {product.name} price to ${product.price}")
+
+def updateOrderQuantity(session: Session, order_id: int, new_quantity: int):
+    order = session.get(Order, order_id)
+    if order is None:
+        print("Order not found")
+        return
+
+    order.quantity = new_quantity
+    session.commit()
+    print(f"Updated Order ID {order.id} quantity to {order.quantity}")
+
+# --------------------
+# Delete Data
+# --------------------
+
+def deleteUser(session: Session, user_id: int):
+    user = session.get(User, user_id)
+    if user is None:
+        print("User not found")
+        return
+
+    session.delete(user)
+    session.commit()
+    print(f"Deleted user {user.name} and their orders")
+
+def deleteProduct(session: Session, product_id: int):
+    product = session.get(Product, product_id)
+    if product is None:
+        print("Product not found")
+        return
+
+    session.delete(product)
+    session.commit()
+    print(f"Deleted product {product.name} and its orders")
+
+def deleteOrder(session: Session, order_id: int):
+    order = session.get(Order, order_id)
+    if order is None:
+        print("Order not found")
+        return
+
+    session.delete(order)
+    session.commit()
+    print(f"Deleted Order ID {order.id}")
+
+# --------------------
+# Function calls
+# --------------------
+
 printUserInfo(Session(engine))
 printProductInfo(Session(engine))
 printOrderInfo(Session(engine))
+
+updateProductPrice(Session(engine), product_id=1, new_price=60)
+printProductInfo(Session(engine))
+
+deleteUser(Session(engine), user_id=1)
+printUserInfo(Session(engine))
