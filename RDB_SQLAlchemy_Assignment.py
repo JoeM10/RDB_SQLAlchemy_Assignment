@@ -15,7 +15,6 @@ engine = create_engine(DATABASE_URL)
 class Base(DeclarativeBase):
     pass
 
-
 # --------------------
 # Database Model
 # --------------------
@@ -51,6 +50,7 @@ class Order(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     product_id: Mapped[int] = mapped_column(Integer, ForeignKey("products.id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped["User"] = relationship("User", back_populates="orders")
     product: Mapped["Product"] = relationship("Product", back_populates="orders")
@@ -58,7 +58,8 @@ class Order(Base):
     def __repr__(self) -> str:
         return (
             f"<Order id={self.id!r} user_id={self.user_id!r} "
-            f"product_id={self.product_id!r} quantity={self.quantity!r}>"
+            f"product_id={self.product_id!r} quantity={self.quantity!r}"
+            f"status={'Shipped' if self.status else 'Pending Shipment'}>"
         )
 
 # Drops the whole database to start fresh each time. Comment out if you want to keep data between runs.
@@ -130,6 +131,17 @@ def printOrderInfo(session: Session):
     print("\nOrder information:")
     for order in orders:
         print(f"Order ID: {order.id}, User: {order.user.name}, Product: {order.product.name}, Quantity: {order.quantity}")
+        print(f"Order Status: {'Shipped' if order.status else 'Pending Shipment'}")
+
+def printAllUserOrders(session: Session):
+    statement = select(User)
+    users = session.scalars(statement).all()
+    print("\nAll user orders:")
+    for user in users:
+        print(f"{user.name}'s Orders:")
+        for order in user.orders:
+            print(f"  Order ID: {order.id}, Product: {order.product.name}, Quantity: {order.quantity}")
+            print(f"  Order Status: {'Shipped' if order.status else 'Pending Shipment'}")
 
 # --------------------
 # Update Data
@@ -138,32 +150,42 @@ def printOrderInfo(session: Session):
 def updateUserEmail(session: Session, user_id: int, new_email: str):
     user = session.get(User, user_id)
     if user is None:
-        print("User not found")
+        print("\nUser not found")
         return
 
     user.email = new_email
     session.commit()
-    print(f"Updated {user.name} email to {user.email}")
+    print(f"\nUpdated {user.name} email to {user.email}")
 
 def updateProductPrice(session: Session, product_id: int, new_price: int):
     product = session.get(Product, product_id)
     if product is None:
-        print("Product not found")
+        print("\nProduct not found")
         return
 
     product.price = new_price
     session.commit()
-    print(f"Updated {product.name} price to ${product.price}")
+    print(f"\nUpdated {product.name} price to ${product.price}")
 
 def updateOrderQuantity(session: Session, order_id: int, new_quantity: int):
     order = session.get(Order, order_id)
     if order is None:
-        print("Order not found")
+        print("\nOrder not found")
         return
 
     order.quantity = new_quantity
     session.commit()
-    print(f"Updated Order ID {order.id} quantity to {order.quantity}")
+    print(f"\nUpdated Order ID {order.id} quantity to {order.quantity}")
+
+def updateOrderStatus(session: Session, order_id: int, new_status: bool):
+    order = session.get(Order, order_id)
+    if order is None:
+        print("\nOrder not found")
+        return
+
+    order.status = new_status
+    session.commit()
+    print(f"\nUpdated Order ID {order.id} status to {'Shipped' if order.status else 'Pending Shipment'}")
 
 # --------------------
 # Delete Data
@@ -177,27 +199,27 @@ def deleteUser(session: Session, user_id: int):
 
     session.delete(user)
     session.commit()
-    print(f"Deleted user {user.name} and their orders")
+    print(f"\nDeleted user {user.name} and their orders")
 
 def deleteProduct(session: Session, product_id: int):
     product = session.get(Product, product_id)
     if product is None:
-        print("Product not found")
+        print("\nProduct not found")
         return
 
     session.delete(product)
     session.commit()
-    print(f"Deleted product {product.name} and its orders")
+    print(f"\nDeleted product {product.name} and its orders")
 
 def deleteOrder(session: Session, order_id: int):
     order = session.get(Order, order_id)
     if order is None:
-        print("Order not found")
+        print("\nOrder not found")
         return
 
     session.delete(order)
     session.commit()
-    print(f"Deleted Order ID {order.id}")
+    print(f"\nDeleted Order ID {order.id}")
 
 # --------------------
 # Function calls
@@ -210,5 +232,11 @@ printOrderInfo(Session(engine))
 updateProductPrice(Session(engine), product_id=1, new_price=60)
 printProductInfo(Session(engine))
 
+printAllUserOrders(Session(engine))
+
 deleteUser(Session(engine), user_id=1)
 printUserInfo(Session(engine))
+
+updateOrderStatus(Session(engine), order_id=2, new_status=True)
+updateOrderStatus(Session(engine), order_id=3, new_status=True)
+printOrderInfo(Session(engine))
